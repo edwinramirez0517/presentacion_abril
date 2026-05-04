@@ -167,10 +167,15 @@ Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.color = '#5f6368';
 
 // PapaParse lee el archivo "distribucion.csv" automáticamente
+// PapaParse lee el archivo "distribucion.csv" automáticamente
 Papa.parse("distribucion.csv", {
     download: true,
     header: true,
+    delimiter: ";", // REGLA 1: Le decimos que tu Excel usa punto y coma
     skipEmptyLines: true,
+    transformHeader: function(header) {
+        return header.trim(); // REGLA 2: Borra los espacios invisibles de los títulos
+    },
     complete: function(resultados) {
         const datosCSV = resultados.data;
 
@@ -181,31 +186,36 @@ Papa.parse("distribucion.csv", {
 
         // Limpieza y sumatoria fila por fila
         datosCSV.forEach(fila => {
-            // Quitamos las comas de los números grandes y los convertimos a decimales
-            let unidadesTexto = String(fila[' UNIDADES.1'] || '0').replace(/,/g, '');
-            let bultosTexto = String(fila[' BULTOS.1'] || '0').replace(/,/g, '');
+            // Buscamos 'UNIDADES.1' y 'BULTOS.1' ya limpios de espacios
+            // Si por alguna razón la columna se llama solo 'UNIDADES', también la detectará
+            let unidadesTexto = String(fila['UNIDADES.1'] || fila['UNIDADES'] || '0').replace(/,/g, '');
+            let bultosTexto = String(fila['BULTOS.1'] || fila['BULTOS'] || '0').replace(/,/g, '');
             
             let unidades = parseFloat(unidadesTexto) || 0;
             let bultos = parseFloat(bultosTexto) || 0;
 
             let tipo = fila['Tipo Transferencia'];
-            let semana = 'SEM-' + fila['SEMANA']; 
+            
+            // Validamos que la fila realmente tenga una semana válida
+            if (fila['SEMANA']) {
+                let semana = 'SEM-' + fila['SEMANA']; 
 
-            // Filtramos todo lo que NO sea "SEGUNDA"
-            if (tipo !== 'SEGUNDA') {
-                
-                // Agrupamos por Semana
-                if (!sumasPorSemana[semana]) {
-                    sumasPorSemana[semana] = { unidades: 0, bultos: 0 };
-                }
-                sumasPorSemana[semana].unidades += unidades;
-                sumasPorSemana[semana].bultos += bultos;
+                // Filtramos todo lo que NO sea "SEGUNDA"
+                if (tipo !== 'SEGUNDA') {
+                    
+                    // Agrupamos por Semana
+                    if (!sumasPorSemana[semana]) {
+                        sumasPorSemana[semana] = { unidades: 0, bultos: 0 };
+                    }
+                    sumasPorSemana[semana].unidades += unidades;
+                    sumasPorSemana[semana].bultos += bultos;
 
-                // Agrupamos por Compañía
-                if (tipo === 'TRASFERENCIAS AEC') {
-                    transfAEC += unidades;
-                } else if (tipo === 'TRASFERENCIAS DS') {
-                    transfDS += unidades;
+                    // Agrupamos por Compañía (Nota: en tu CSV dice "TRASFERENCIAS" sin la N)
+                    if (tipo === 'TRASFERENCIAS AEC') {
+                        transfAEC += unidades;
+                    } else if (tipo === 'TRASFERENCIAS DS') {
+                        transfDS += unidades;
+                    }
                 }
             }
         });
@@ -275,6 +285,10 @@ Papa.parse("distribucion.csv", {
             }
         });
     },
+    error: function(err) {
+        console.error("No se pudo cargar el archivo distribucion.csv", err);
+    }
+});
     error: function(err) {
         console.error("No se pudo cargar el archivo distribucion.csv", err);
         alert("Error: Asegúrate de subir el archivo distribucion.csv al repositorio.");
