@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Producción CEDIS - Marzo 2026</title>
+    
+    <!-- Librerías de Gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    
+    <!-- NUEVO: Librería PapaParse para leer CSV automáticamente -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- AQUÍ VA EXACTAMENTE TODO TU CÓDIGO CSS (La etiqueta <style> que ya tienes) -->
+    <style>
+        /* ... Pega aquí todo tu CSS original sin cambiarle nada ... */
+    </style>
+</head>
+<body>
+
+    <!-- AQUÍ VA EXACTAMENTE TODO TU HTML (El Sidebar, el Header y los Sections) -->
+    <!-- ... Pega aquí tu estructura de <body> ... -->
+
+<script>
+// ============================
+// NAVIGATION Y CONFIGURACIÓN BASE
+// ============================
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('section-' + id).classList.add('active');
+    const navEl = document.getElementById('nav-' + id);
+    if (navEl) navEl.classList.add('active');
+    window.scrollTo(0, 0);
+    document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#5f6368';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 16;
+
+const COLORS = {
+    primary: '#1a237e',
+    primaryLight: '#3949ab',
+    accent: '#ff6f00',
+    // ... tus otros colores ...
+};
+
+// ==========================================================
+// NUEVA LÓGICA: LECTURA DE CSV DESDE GITHUB
+// ==========================================================
+// Vamos a usar PapaParse para leer un archivo llamado "recepcion.csv"
+// Formato esperado en el CSV:
+// semana,unidades
+// SEM-10,96494
+// SEM-11,146858
+// SEM-12,211741
+
+Papa.parse("recepcion.csv", {
+    download: true, // Esto hace el "fetch" automáticamente al archivo en tu GitHub
+    header: true,   // Reconoce la primera fila como títulos
+    dynamicTyping: true, // Convierte los números de texto a valores matemáticos
+    complete: function(resultados) {
+        
+        // 1. Extraemos la información del CSV
+        const datosCSV = resultados.data;
+        
+        // 2. Separamos las columnas para el gráfico
+        const etiquetasSemanas = datosCSV.map(fila => fila.semana); // Eje X
+        const valoresUnidades = datosCSV.map(fila => fila.unidades); // Eje Y
+
+        // 3. Dibujamos tu gráfico exacto, pero usando los datos del CSV
+        new Chart(document.getElementById('chartRecNacSemanal'), {
+            type: 'bar',
+            data: {
+                labels: etiquetasSemanas, // Cargado del CSV
+                datasets: [{
+                    label: 'Unidades Recibidas',
+                    data: valoresUnidades, // Cargado del CSV
+                    backgroundColor: COLORS.primary,
+                    borderRadius: 6,
+                    maxBarThickness: 50
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString() + ' uds' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => (v/1000) + 'K' } }
+                }
+            }
+        });
+    }
+});
+
+// ============================
+// AQUÍ CONTINÚAN TUS DEMÁS GRÁFICOS...
+// ============================
+
+</script>
+</body>
+</html>
