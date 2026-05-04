@@ -4,28 +4,522 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe de Producción CEDIS - Marzo 2026</title>
-    
-    <!-- Librerías de Gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    
-    <!-- NUEVO: Librería PapaParse para leer CSV automáticamente -->
+    <!-- LIBRERÍA PARA LEER ARCHIVOS CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
-    <!-- AQUÍ VA EXACTAMENTE TODO TU CÓDIGO CSS (La etiqueta <style> que ya tienes) -->
     <style>
-        /* ... Pega aquí todo tu CSS original sin cambiarle nada ... */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #1a237e;
+            --primary-light: #3949ab;
+            --primary-dark: #0d1642;
+            --accent: #ff6f00;
+            --accent-light: #ffa040;
+            --accent-dark: #c43e00;
+            --success: #2e7d32;
+            --success-light: #4caf50;
+            --danger: #c62828;
+            --danger-light: #ef5350;
+            --warning: #f57f17;
+            --info: #0277bd;
+            --bg-main: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #5f6368;
+            --text-light: #9aa0a6;
+            --border: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --radius-sm: 8px;
+            --gradient-primary: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+            --gradient-accent: linear-gradient(135deg, #ff6f00 0%, #ffa040 100%);
+            --gradient-success: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+            --gradient-danger: linear-gradient(135deg, #c62828 0%, #ef5350 100%);
+            --ds-color: #e65100;
+            --aec-color: #1a237e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--gradient-primary);
+            z-index: 1000;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-brand {
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        .sidebar-nav { padding: 16px 0; }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--accent);
+        }
+
+        .sidebar-nav a .nav-icon {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-nav .nav-section {
+            padding: 16px 24px 8px;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .top-header {
+            background: #fff;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .top-header h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .top-header .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .header-badge {
+            background: var(--gradient-accent);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .section {
+            padding: 40px;
+            display: none;
+        }
+
+        .section.active { display: block; }
+
+        .section-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .kpi-card.blue::before { background: var(--primary); }
+        .kpi-card.orange::before { background: var(--accent); }
+        .kpi-card.green::before { background: var(--success); }
+        .kpi-card.red::before { background: var(--danger); }
+
+        .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .kpi-change {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .kpi-change.positive { color: var(--success); }
+        .kpi-change.negative { color: var(--danger); }
+
+        .kpi-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2.2rem;
+            opacity: 0.12;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .chart-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        .chart-badge.up { background: #e8f5e9; color: var(--success); }
+        .chart-badge.down { background: #ffebee; color: var(--danger); }
+        .chart-badge.neutral { background: #e3f2fd; color: var(--info); }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+        }
+
+        .cover-section {
+            min-height: calc(100vh - 73px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: var(--gradient-primary);
+            color: #fff;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-section::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,111,0,0.15) 0%, transparent 70%);
+            top: -100px;
+            right: -100px;
+            border-radius: 50%;
+        }
+
+        .cover-section::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(57,73,171,0.3) 0%, transparent 70%);
+            bottom: -100px;
+            left: -50px;
+            border-radius: 50%;
+        }
+
+        .cover-content { position: relative; z-index: 1; }
+
+        .cover-content h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        .cover-content h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 400;
+            opacity: 0.8;
+            margin-bottom: 32px;
+        }
+
+        .cover-divider {
+            width: 80px;
+            height: 4px;
+            background: var(--accent);
+            margin: 0 auto 32px;
+            border-radius: 2px;
+        }
+
+        .cover-meta {
+            font-size: 0.9rem;
+            opacity: 0.6;
+            line-height: 2;
+        }
+
+        .cover-companies {
+            display: flex;
+            gap: 40px;
+            margin-top: 48px;
+            justify-content: center;
+        }
+
+        .cover-company {
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .cover-company h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .cover-company p {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .hamburger { display: block; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .section { padding: 20px; }
+            .cover-content h1 { font-size: 2rem; }
+        }
+
+        @media (max-width: 600px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .top-header { padding: 16px 20px; }
+            .cover-companies { flex-direction: column; gap: 16px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- AQUÍ VA EXACTAMENTE TODO TU HTML (El Sidebar, el Header y los Sections) -->
-    <!-- ... Pega aquí tu estructura de <body> ... -->
+<!-- SIDEBAR NAVIGATION -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div style="font-family:'Poppins',sans-serif; font-size:1.4rem; font-weight:900; color:#fff; letter-spacing:-0.5px;">AEC + DS</div>
+        <div class="sidebar-brand">Centro de Distribución</div>
+    </div>
+    <div class="sidebar-nav">
+        <div class="nav-section">Principal</div>
+        <a href="#" onclick="showSection('cover')" class="active" id="nav-cover">
+            <span class="nav-icon">📊</span> Portada
+        </a>
+        <div class="nav-section">Operaciones</div>
+        <a href="#" onclick="showSection('recepcion')" id="nav-recepcion">
+            <span class="nav-icon">📦</span> Recepción
+        </a>
+    </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+    <header class="top-header">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span class="hamburger" onclick="toggleSidebar()">☰</span>
+            <h1>Informe de Producción CEDIS</h1>
+        </div>
+        <div class="header-meta">
+            <span class="header-badge">Marzo 2026</span>
+            <span>Bo. Quebrada Seca Km5, El Progreso, Yoro</span>
+        </div>
+    </header>
+
+    <!-- COVER -->
+    <section class="section active" id="section-cover">
+        <div class="cover-section" style="border-radius:var(--radius);margin:-40px;margin-top:-40px;">
+            <div class="cover-content">
+                <h2 style="font-size:1rem;letter-spacing:3px;text-transform:uppercase;">Centro de Distribución CEDIS</h2>
+                <h1>Informe de Producción</h1>
+                <h2>Marzo 2026</h2>
+                <div class="cover-divider"></div>
+                <div class="cover-companies">
+                    <div class="cover-company">
+                        <h3>El Compadre (AEC)</h3>
+                        <p>Almacenes El Compadre, S. de R.L. de C.V.</p>
+                    </div>
+                    <div class="cover-company">
+                        <h3>Danilos Store (DS)</h3>
+                        <p>Danilos Store</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RECEPCIÓN -->
+    <section class="section" id="section-recepcion">
+        <h2 class="section-title">Recepción de Mercadería</h2>
+        <p class="section-subtitle">Análisis comparativo de unidades recibidas a nivel nacional e internacional — Marzo 2026</p>
+
+        <h3 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:16px;color:var(--primary);">Recepción Nacional</h3>
+        <div class="kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-label">Unidades Recibidas Nacional</div>
+                <div class="kpi-value">511,647</div>
+                <div class="kpi-change positive">▲ 0.62% vs 2025</div>
+                <div class="kpi-icon">📦</div>
+            </div>
+            <div class="kpi-card orange">
+                <div class="kpi-label">Costo DS</div>
+                <div class="kpi-value">17.42%</div>
+            </div>
+            <div class="kpi-card green">
+                <div class="kpi-label">Costo AEC</div>
+                <div class="kpi-value">82.58%</div>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Trazabilidad Semanal (Alimentado por CSV)</div>
+                    <span class="chart-badge up">▲ Automático</span>
+                </div>
+                <div class="chart-container"><canvas id="chartRecNacSemanal"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Recepción Nacional por División (Estático)</div>
+                </div>
+                <div class="chart-container"><canvas id="chartRecNacDivision"></canvas></div>
+            </div>
+        </div>
+    </section>
+</div>
 
 <script>
-// ============================
-// NAVIGATION Y CONFIGURACIÓN BASE
-// ============================
+// NAVEGACIÓN
 function showSection(id) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
@@ -40,73 +534,67 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
-Chart.defaults.font.family = "'Inter', sans-serif";
-Chart.defaults.font.size = 12;
-Chart.defaults.color = '#5f6368';
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-Chart.defaults.plugins.legend.labels.padding = 16;
-
+// COLORES PARA LAS GRÁFICAS
 const COLORS = {
     primary: '#1a237e',
-    primaryLight: '#3949ab',
     accent: '#ff6f00',
-    // ... tus otros colores ...
+    success: '#2e7d32',
+    danger: '#c62828'
 };
+const PALETTE = ['#1a237e','#ff6f00','#2e7d32','#c62828','#6a1b9a','#00695c','#ad1457','#0277bd'];
 
-// ==========================================================
-// NUEVA LÓGICA: LECTURA DE CSV DESDE GITHUB
-// ==========================================================
-// Vamos a usar PapaParse para leer un archivo llamado "recepcion.csv"
-// Formato esperado en el CSV:
-// semana,unidades
-// SEM-10,96494
-// SEM-11,146858
-// SEM-12,211741
-
+// 1. GRÁFICA ALIMENTADA POR CSV DESDE GITHUB (PapaParse)
 Papa.parse("recepcion.csv", {
-    download: true, // Esto hace el "fetch" automáticamente al archivo en tu GitHub
-    header: true,   // Reconoce la primera fila como títulos
-    dynamicTyping: true, // Convierte los números de texto a valores matemáticos
+    download: true, 
+    header: true,
+    dynamicTyping: true,
     complete: function(resultados) {
-        
-        // 1. Extraemos la información del CSV
         const datosCSV = resultados.data;
-        
-        // 2. Separamos las columnas para el gráfico
-        const etiquetasSemanas = datosCSV.map(fila => fila.semana); // Eje X
-        const valoresUnidades = datosCSV.map(fila => fila.unidades); // Eje Y
+        const etiquetasSemanas = datosCSV.map(fila => fila.semana);
+        const valoresUnidades = datosCSV.map(fila => fila.unidades);
 
-        // 3. Dibujamos tu gráfico exacto, pero usando los datos del CSV
         new Chart(document.getElementById('chartRecNacSemanal'), {
             type: 'bar',
             data: {
-                labels: etiquetasSemanas, // Cargado del CSV
+                labels: etiquetasSemanas,
                 datasets: [{
                     label: 'Unidades Recibidas',
-                    data: valoresUnidades, // Cargado del CSV
+                    data: valoresUnidades,
                     backgroundColor: COLORS.primary,
                     borderRadius: 6,
                     maxBarThickness: 50
                 }]
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString() + ' uds' } }
-                },
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: v => (v/1000) + 'K' } }
-                }
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    },
+    error: function() {
+        // Si no subes el archivo recepcion.csv, carga datos de prueba automáticamente
+        new Chart(document.getElementById('chartRecNacSemanal'), {
+            type: 'bar',
+            data: {
+                labels: ['SEM-10', 'SEM-11', 'SEM-12', 'SEM-13'],
+                datasets: [{ label: 'Falta subir CSV', data: [96000, 146000, 211000, 26000], backgroundColor: COLORS.danger, borderRadius: 6 }]
             }
         });
     }
 });
 
-// ============================
-// AQUÍ CONTINÚAN TUS DEMÁS GRÁFICOS...
-// ============================
-
+// 2. GRÁFICA ESTÁTICA (Para que la página no se vea vacía)
+new Chart(document.getElementById('chartRecNacDivision'), {
+    type: 'bar',
+    data: {
+        labels: ['Belleza', 'Calzado', 'Hogar', 'Int. Detalle', 'Cuid. Personal'],
+        datasets: [{
+            label: 'Unidades',
+            data: [215447, 92520, 61960, 49238, 21104],
+            backgroundColor: PALETTE,
+            borderRadius: 6,
+            maxBarThickness: 40
+        }]
+    },
+    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+});
 </script>
 </body>
 </html>
