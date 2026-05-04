@@ -51,12 +51,14 @@
         .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
         .kpi-card.blue::before { background: var(--primary); }
         .kpi-card.orange::before { background: var(--accent); }
-        .kpi-card.green::before { background: var(--success); }
         .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
         .kpi-value { font-family: 'Poppins', sans-serif; font-size: 1.8rem; font-weight: 800; line-height: 1; }
 
         /* CHARTS & TABLES */
         .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 32px; }
+        .chart-grid.single { grid-template-columns: 1fr; }
+        .comparison-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        
         .chart-card { background: var(--bg-card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
         .chart-card.full-width { grid-column: 1 / -1; }
         .chart-header { margin-bottom: 20px; }
@@ -64,14 +66,20 @@
         .chart-container { position: relative; width: 100%; }
         
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .data-table th { background: var(--primary-dark); color: #fff; padding: 12px; text-align: left; font-weight: 600; }
+        .data-table th { background: var(--primary-dark); color: #fff; padding: 12px; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 1; }
         .data-table td { padding: 12px; border-bottom: 1px solid var(--border); }
         .text-right { text-align: right; }
         .badge-info { background: #e3f2fd; color: #0277bd; padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 0.75rem;}
+        .badge-warning { background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 0.75rem;}
 
         /* COVER */
         .cover-section { min-height: calc(100vh - 73px); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--gradient-primary); color: #fff; padding: 60px; margin:-40px; margin-top:-40px; border-radius: var(--radius);}
         .cover-content h1 { font-family: 'Poppins', sans-serif; font-size: 3rem; font-weight: 900; margin-bottom: 12px; }
+        
+        @media (max-width: 1024px) {
+            .chart-grid { grid-template-columns: 1fr; }
+            .comparison-row { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -88,7 +96,6 @@
         <div class="nav-section">Operaciones</div>
         <a href="#" onclick="showSection('distribucion')" id="nav-distribucion"><span class="nav-icon">🚚</span> Distribución</a>
         
-        <!-- NUEVA SECCIÓN DE SEGUNDA -->
         <div class="nav-section">Danilos Store</div>
         <a href="#" onclick="showSection('segunda')" id="nav-segunda"><span class="nav-icon">👕</span> Segunda D'S</a>
     </div>
@@ -107,7 +114,7 @@
                 <h2 style="font-size:1rem;letter-spacing:3px;text-transform:uppercase;">Gerencia CEDIS</h2>
                 <h1>Dashboard Interactivo</h1>
                 <div style="width: 80px; height: 4px; background: var(--accent); margin: 0 auto 32px;"></div>
-                <p>Navega en el menú lateral para ver el detalle de Distribución y Segunda.</p>
+                <p>Navega en el menú lateral para ver el detalle de Distribución (Mayoreo vs Detalle) y Segunda.</p>
             </div>
         </div>
     </section>
@@ -129,6 +136,7 @@
             </div>
         </div>
 
+        <!-- Gráficos Principales -->
         <div class="chart-grid">
             <div class="chart-card">
                 <div class="chart-header"><div class="chart-title">Distribución Semanal</div></div>
@@ -140,18 +148,31 @@
             </div>
         </div>
 
-        <!-- Nuevos Detalles Gerenciales -->
-        <div class="chart-grid">
+        <!-- Gráfico Apilado por División -->
+        <div class="chart-grid single">
             <div class="chart-card">
-                <div class="chart-header"><div class="chart-title">Top 10 Divisiones por Volumen</div></div>
+                <div class="chart-header"><div class="chart-title">Top 10 Divisiones: Mayoreo vs Detalle</div></div>
                 <div class="chart-container"><canvas id="chartDistDivisiones"></canvas></div>
             </div>
-            <div class="chart-card">
-                <div class="chart-header"><div class="chart-title">Top 10 Tiendas Destino</div></div>
+        </div>
+
+        <!-- Tablas de Tiendas (Separadas) -->
+        <div class="comparison-row">
+            <div class="chart-card" style="border-top: 4px solid var(--accent);">
+                <div class="chart-header"><div class="chart-title" style="color:var(--accent);">Top 10 Tiendas - MAYOREO (Solo AEC)</div></div>
                 <div style="max-height: 350px; overflow-y: auto;">
-                    <table class="data-table" id="tabla-destinos-dist">
+                    <table class="data-table" id="tabla-mayoreo">
                         <thead><tr><th>Tienda</th><th class="text-right">Unidades</th><th class="text-right">Bultos</th></tr></thead>
-                        <tbody><!-- Se llena con JS --></tbody>
+                        <tbody><!-- JS --></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="chart-card" style="border-top: 4px solid var(--primary);">
+                <div class="chart-header"><div class="chart-title" style="color:var(--primary);">Top 10 Tiendas - DETALLE (AEC y DS)</div></div>
+                <div style="max-height: 350px; overflow-y: auto;">
+                    <table class="data-table" id="tabla-detalle">
+                        <thead><tr><th>Tienda</th><th class="text-right">Unidades</th><th class="text-right">Bultos</th></tr></thead>
+                        <tbody><!-- JS --></tbody>
                     </table>
                 </div>
             </div>
@@ -161,7 +182,7 @@
     <!-- ==================== SECCIÓN SEGUNDA ==================== -->
     <section class="section" id="section-segunda">
         <h2 class="section-title" style="color: var(--ds-color);">Segunda D'S</h2>
-        <p style="color:var(--text-secondary); margin-bottom: 24px;">Análisis exclusivo de transferencias de Segunda.</p>
+        <p style="color:var(--text-secondary); margin-bottom: 24px;">Análisis exclusivo de transferencias de Segunda a tiendas Detalle DS.</p>
 
         <div class="kpi-grid">
             <div class="kpi-card orange">
@@ -174,9 +195,9 @@
             </div>
         </div>
 
-        <div class="chart-grid">
-            <div class="chart-card full-width">
-                <div class="chart-header"><div class="chart-title">Top Destinos - Segunda D'S</div></div>
+        <div class="chart-grid single">
+            <div class="chart-card">
+                <div class="chart-header"><div class="chart-title">Top 15 Destinos - Segunda D'S</div></div>
                 <div class="chart-container"><canvas id="chartSegDestinos"></canvas></div>
             </div>
         </div>
