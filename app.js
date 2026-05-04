@@ -10,7 +10,7 @@ function showSection(id) {
 
 Chart.defaults.font.family = "'Inter', sans-serif";
 
-// Utilidad para ordenar objetos por valor y sacar el Top N
+// Función para ordenar objetos y sacar los Top N
 function getTopN(obj, n) {
     return Object.entries(obj)
         .sort((a, b) => b[1].unidades - a[1].unidades)
@@ -29,14 +29,17 @@ Papa.parse("distribucion.csv", {
     complete: function(resultados) {
         const datos = resultados.data;
 
-        // --- VARIABLES PARA DISTRIBUCIÓN (Excluyendo Segunda) ---
+        // --- VARIABLES GENERALES ---
         let distSemanas = {};
-        let distDivisiones = {};
-        let distDestinos = {};
-        let totalDistUnidades = 0;
-        let totalDistBultos = 0;
         let transfAEC = 0;
         let transfDS = 0;
+        let totalDistUnidades = 0;
+        let totalDistBultos = 0;
+        
+        // --- VARIABLES DE CLASIFICACIÓN (Mayoreo vs Detalle) ---
+        let distDivisiones = {};
+        let mayoreoDestinos = {};
+        let detalleDestinos = {};
 
         // --- VARIABLES PARA SEGUNDA ---
         let segDestinos = {};
@@ -53,34 +56,50 @@ Papa.parse("distribucion.csv", {
             let division = fila['Division'] || 'Sin División';
             let destino = fila['Destino'] || 'Sin Destino';
             
-            if (!fila['SEMANA']) return; // Ignorar filas vacías
+            if (!fila['SEMANA']) return;
             let semana = 'SEM-' + fila['SEMANA'];
 
+            // Regla de Negocio: AEC tiene Mayoreo y Detalle. DS solo tiene Detalle.
+            // Identificamos "Mayoreo" si la palabra existe en el destino.
+            let isMayoreo = destino.toUpperCase().includes('MAYOREO');
+
             if (tipo !== 'SEGUNDA') {
-                // --- LÓGICA DISTRIBUCIÓN ---
                 totalDistUnidades += unidades;
                 totalDistBultos += bultos;
 
-                // Agrupar por Semana
+                // Sumatoria Semanal
                 if (!distSemanas[semana]) distSemanas[semana] = { unidades: 0, bultos: 0 };
                 distSemanas[semana].unidades += unidades;
                 distSemanas[semana].bultos += bultos;
 
-                // Agrupar por Compañía
+                // Sumatoria Compañía
                 if (tipo === 'TRASFERENCIAS AEC') transfAEC += unidades;
                 else if (tipo === 'TRASFERENCIAS DS') transfDS += unidades;
 
-                // Agrupar por División
-                if (!distDivisiones[division]) distDivisiones[division] = { unidades: 0 };
-                distDivisiones[division].unidades += unidades;
+                // Agrupar Divisiones y separar internamente por Mayoreo/Detalle
+                if (!distDivisiones[division]) {
+                    distDivisiones[division] = { total: 0, mayoreo: 0, detalle: 0 };
+                }
+                distDivisiones[division].total += unidades;
+                if (isMayoreo) {
+                    distDivisiones[division].mayoreo += unidades;
+                } else {
+                    distDivisiones[division].detalle += unidades;
+                }
 
-                // Agrupar por Destino
-                if (!distDestinos[destino]) distDestinos[destino] = { unidades: 0, bultos: 0 };
-                distDestinos[destino].unidades += unidades;
-                distDestinos[destino].bultos += bultos;
+                // Agrupar Destinos en dos listas separadas
+                if (isMayoreo) {
+                    if (!mayoreoDestinos[destino]) mayoreoDestinos[destino] = { unidades: 0, bultos: 0 };
+                    mayoreoDestinos[destino].unidades += unidades;
+                    mayoreoDestinos[destino].bultos += bultos;
+                } else {
+                    if (!detalleDestinos[destino]) detalleDestinos[destino] = { unidades: 0, bultos: 0 };
+                    detalleDestinos[destino].unidades += unidades;
+                    detalleDestinos[destino].bultos += bultos;
+                }
 
             } else {
-                // --- LÓGICA SEGUNDA ---
+                // LÓGICA EXCLUSIVA SEGUNDA (Todo es Detalle)
                 totalSegUnidades += unidades;
                 totalSegBultos += bultos;
 
@@ -94,12 +113,11 @@ Papa.parse("distribucion.csv", {
         // ==========================================
         document.getElementById('kpi-dist-unidades').innerText = totalDistUnidades.toLocaleString();
         document.getElementById('kpi-dist-bultos').innerText = totalDistBultos.toLocaleString();
-        
         document.getElementById('kpi-seg-unidades').innerText = totalSegUnidades.toLocaleString();
         document.getElementById('kpi-seg-bultos').innerText = totalSegBultos.toLocaleString();
 
         // ==========================================
-        // DIBUJAR GRÁFICAS DE DISTRIBUCIÓN
+        // DIBUJAR GRÁFICAS Y TABLAS
         // ==========================================
         
         // 1. Gráfica Semanal
@@ -110,7 +128,7 @@ Papa.parse("distribucion.csv", {
                 labels: etiquetasSemanas,
                 datasets: [
                     { label: 'Unidades', data: etiquetasSemanas.map(s => distSemanas[s].unidades), backgroundColor: '#1a237e', borderRadius: 4, yAxisID: 'y' },
-                    { label: 'Bultos', data: etiquetasSemanas.map(s => distSemanas[s].bultos), type: 'line', borderColor: '#ff6f00', pointBackgroundColor: '#ff6f00', yAxisID: 'y1' }
+                    { label: 'Bultos', data: etiquetasSemanas.map(s => distSemanas[s].bultos), type: 'line', borderColor: '#ff6f00', pointBackgroundColor: '#ff6f00', tension: 0.2, yAxisID: 'y1' }
                 ]
             },
             options: { scales: { y: { ticks: { callback: v => (v/1000) + 'K' } }, y1: { position: 'right', grid: { drawOnChartArea: false } } } }
@@ -125,43 +143,62 @@ Papa.parse("distribucion.csv", {
             }
         });
 
-        // 3. Top 10 Divisiones (Distribución)
-        let topDivs = getTopN(distDivisiones, 10);
+        // 3. Gráfica de Barras Apiladas (Divisiones: Mayoreo vs Detalle)
+        let topDivs = Object.entries(distDivisiones).sort((a,b) => b[1].total - a[1].total).slice(0, 10);
         new Chart(document.getElementById('chartDistDivisiones'), {
             type: 'bar',
             data: {
                 labels: topDivs.map(item => item[0]),
-                datasets: [{ label: 'Unidades', data: topDivs.map(item => item[1].unidades), backgroundColor: '#3949ab', borderRadius: 4 }]
+                datasets: [
+                    { label: 'Detalle', data: topDivs.map(item => item[1].detalle), backgroundColor: '#3949ab', borderRadius: 4 },
+                    { label: 'Mayoreo (Solo AEC)', data: topDivs.map(item => item[1].mayoreo), backgroundColor: '#ff6f00', borderRadius: 4 }
+                ]
             },
-            options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => (v/1000) + 'K' } } } }
+            options: { 
+                indexAxis: 'y', 
+                plugins: { legend: { position: 'bottom' } }, 
+                scales: { 
+                    x: { stacked: true, ticks: { callback: v => (v/1000) + 'K' } },
+                    y: { stacked: true }
+                } 
+            }
         });
 
-        // 4. Llenar Tabla de Top 10 Destinos (Distribución)
-        let topDestinosDist = getTopN(distDestinos, 10);
-        let tablaHtml = '';
-        topDestinosDist.forEach((item, index) => {
-            tablaHtml += `<tr>
+        // 4. Llenar Tabla de Top Tiendas - MAYOREO
+        let topMayoreo = getTopN(mayoreoDestinos, 10);
+        let htmlMayoreo = '';
+        topMayoreo.forEach((item, index) => {
+            htmlMayoreo += `<tr>
+                <td><strong>${index + 1}.</strong> ${item[0]}</td>
+                <td class="text-right"><span class="badge-warning">${item[1].unidades.toLocaleString()}</span></td>
+                <td class="text-right">${item[1].bultos.toLocaleString()}</td>
+            </tr>`;
+        });
+        document.querySelector('#tabla-mayoreo tbody').innerHTML = htmlMayoreo;
+
+        // 5. Llenar Tabla de Top Tiendas - DETALLE
+        let topDetalle = getTopN(detalleDestinos, 10);
+        let htmlDetalle = '';
+        topDetalle.forEach((item, index) => {
+            htmlDetalle += `<tr>
                 <td><strong>${index + 1}.</strong> ${item[0]}</td>
                 <td class="text-right"><span class="badge-info">${item[1].unidades.toLocaleString()}</span></td>
                 <td class="text-right">${item[1].bultos.toLocaleString()}</td>
             </tr>`;
         });
-        document.querySelector('#tabla-destinos-dist tbody').innerHTML = tablaHtml;
-
+        document.querySelector('#tabla-detalle tbody').innerHTML = htmlDetalle;
 
         // ==========================================
-        // DIBUJAR GRÁFICAS DE SEGUNDA
+        // GRÁFICA DE SEGUNDA (Separada)
         // ==========================================
-        
-        // Top 10 Destinos de Segunda
-        let topDestinosSeg = getTopN(segDestinos, 10);
+        let topDestinosSeg = getTopN(segDestinos, 15);
         new Chart(document.getElementById('chartSegDestinos'), {
             type: 'bar',
             data: {
                 labels: topDestinosSeg.map(item => item[0]),
-                datasets: [{ label: 'Unidades Enviadas', data: topDestinosSeg.map(item => item[1].unidades), backgroundColor: '#e65100', borderRadius: 4 }]
+                datasets: [{ label: 'Unidades Enviadas (Segunda)', data: topDestinosSeg.map(item => item[1].unidades), backgroundColor: '#e65100', borderRadius: 4 }]
             },
-            options: { plugins: { legend: { display: false } } }
+            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => (v/1000) + 'K' } } } }
         });
 
     }
